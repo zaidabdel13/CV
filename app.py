@@ -3,62 +3,69 @@ import pandas as pd
 import docx
 import PyPDF2
 import re
-from dateutil import parser
+from datetime import datetime
 
-st.set_page_config(page_title="🤖 روبوت قراءة الخبرة مثل الإنسان", layout="wide")
-st.title("🤖 روبوت قراءة الخبرة من السير الذاتية")
-st.write("ارفع ملفات PDF, DOCX أو Excel وسيقوم Streamlit بحساب سنوات الخبرة من التواريخ كما لو كان إنساناً يقرأها.")
+st.set_page_config(page_title="🤖 محلل خبرة عملي", layout="wide")
+st.title("🤖 محلل سنوات الخبرة من السير الذاتية")
+st.write("تحليل واقعي للتواريخ بدون AI – نتيجة منطقية مثل قراءة الإنسان")
 
-uploaded_files = st.file_uploader("ارفع الملفات هنا", accept_multiple_files=True)
+uploaded_files = st.file_uploader("ارفع السيرة الذاتية", accept_multiple_files=True)
 
-# دالة لاستخراج النصوص من الملفات
+# ---------- قراءة النص ----------
 def extract_text(file):
-    if file.name.endswith(".pdf"):
+    if file.name.lower().endswith(".pdf"):
         reader = PyPDF2.PdfReader(file)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text() + "\n"
-        return text
-    elif file.name.endswith(".docx"):
+        return "\n".join([p.extract_text() or "" for p in reader.pages])
+
+    elif file.name.lower().endswith(".docx"):
         doc = docx.Document(file)
-        return "\n".join([p.text for p in doc.paragraphs])
-    elif file.name.endswith(".xlsx") or file.name.endswith(".xls"):
+        return "\n".join(p.text for p in doc.paragraphs)
+
+    elif file.name.lower().endswith((".xlsx", ".xls")):
         df = pd.read_excel(file)
         return df.to_string()
-    else:
-        return ""
 
-# دالة لحساب سنوات الخبرة من أي تواريخ في النص
-def extract_experience_dates(text):
-    # استخراج كل السنوات في النص (4 أرقام)
-    potential_dates = re.findall(r'\b(19|20)\d{2}\b', text)
-    potential_dates = [int(d) for d in potential_dates]
+    return ""
 
-    if not potential_dates:
-        return "غير محدد"
+# ---------- استخراج السنوات ----------
+def extract_years(text):
+    years = re.findall(r'\b(19\d{2}|20\d{2})\b', text)
+    years = sorted(set(int(y) for y in years))
+    return years
 
-    # فرز السنوات وتصحيح الفترات
-    potential_dates.sort()
-    total_years = 0
-    for i in range(0, len(potential_dates)-1, 2):
-        start = potential_dates[i]
-        end = potential_dates[i+1]
-        if end >= start:
-            total_years += end - start
+# ---------- حساب الخبرة ----------
+def calculate_experience(years):
+    if len(years) < 2:
+        return "غير واضح"
 
-    # إذا لم توجد أزواج، نقدر نعطي تقدير من أول سنة حتى آخر سنة
-    if total_years == 0 and len(potential_dates) >= 2:
-        total_years = potential_dates[-1] - potential_dates[0]
+    start = min(years)
+    end = max(years)
 
-    return total_years
+    current_year = datetime.now().year
+    if end > current_year:
+        end = current_year
 
-# معالجة الملفات واظهار النتائج
+    experience = end - start
+
+    # منطق بشري: ما فيه خبرة 30 سنة لو الشخص عمره 25
+    if experience < 0 or experience > 50:
+        return "غير منطقي"
+
+    return experience
+
+# ---------- التنفيذ ----------
 if uploaded_files:
     for file in uploaded_files:
-        st.subheader(f"📄 الملف: {file.name}")
+        st.subheader(f"📄 {file.name}")
         text = extract_text(file)
-        if text:
-            experience = extract_experience_dates(text)
-            st.write(f"📝 سنوات الخبرة: {experience}")
+
+        years = extract_years(text)
+
+        if years:
+            experience = calculate_experience(years)
+            st.success(f"🧠 سنوات الخبرة التقديرية: {experience} سنة")
+
+            with st.expander("🔍 تفاصيل التحليل"):
+                st.write("السنوات المكتشفة:", years)
         else:
-            st.write("⚠️ لم يتمكن Streamlit من قراءة الملف.")
+            st.error("❌ لم يتم العثور على تواريخ واضحة في السيرة")
