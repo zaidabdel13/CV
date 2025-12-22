@@ -5,13 +5,78 @@ import PyPDF2
 import re
 from datetime import datetime
 
-st.set_page_config(page_title="🤖 محلل خبرة عملي", layout="wide")
-st.title("🤖 محلل سنوات الخبرة من السير الذاتية")
-st.write("تحليل واقعي للتواريخ بدون AI – نتيجة منطقية مثل قراءة الإنسان")
+# ================== إعداد الصفحة ==================
+st.set_page_config(
+    page_title="HR Resume Analyzer",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-uploaded_files = st.file_uploader("ارفع السيرة الذاتية", accept_multiple_files=True)
+# ================== CSS احترافي ==================
+st.markdown("""
+<style>
+/* خلفية الصفحة */
+.stApp {
+    background: radial-gradient(circle at top, #4b0f14 0%, #1a0003 60%);
+    color: #f5f5f5;
+    font-family: 'Segoe UI', sans-serif;
+}
 
-# ---------- قراءة النص ----------
+/* تأثير دخان */
+.stApp::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: url("https://i.imgur.com/8IuucQZ.png");
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* العنوان */
+h1, h2, h3 {
+    color: #ffdddd;
+    letter-spacing: 1px;
+}
+
+/* كروت المرشحين */
+.card {
+    background: rgba(20, 0, 0, 0.75);
+    border: 1px solid rgba(255, 80, 80, 0.25);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.6);
+}
+
+/* نتيجة الخبرة */
+.result {
+    font-size: 28px;
+    font-weight: bold;
+    color: #ff6b6b;
+}
+
+/* زر الرفع */
+.stFileUploader label {
+    color: #ffcccc !important;
+    font-size: 18px;
+}
+
+/* إخفاء شعار Streamlit */
+footer {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
+
+# ================== العنوان ==================
+st.markdown("<h1>🧑‍💼 HR Resume Analyzer</h1>", unsafe_allow_html=True)
+st.markdown("<p>واجهة احترافية لتحليل السير الذاتية واستخراج سنوات الخبرة</p>", unsafe_allow_html=True)
+
+uploaded_files = st.file_uploader(
+    "📄 ارفع السير الذاتية (PDF / Word / Excel)",
+    accept_multiple_files=True
+)
+
+# ================== قراءة النص ==================
 def extract_text(file):
     if file.name.lower().endswith(".pdf"):
         reader = PyPDF2.PdfReader(file)
@@ -27,13 +92,12 @@ def extract_text(file):
 
     return ""
 
-# ---------- استخراج السنوات ----------
+# ================== تحليل الخبرة ==================
 def extract_years(text):
     years = re.findall(r'\b(19\d{2}|20\d{2})\b', text)
     years = sorted(set(int(y) for y in years))
     return years
 
-# ---------- حساب الخبرة ----------
 def calculate_experience(years):
     if len(years) < 2:
         return "غير واضح"
@@ -45,27 +109,22 @@ def calculate_experience(years):
     if end > current_year:
         end = current_year
 
-    experience = end - start
-
-    # منطق بشري: ما فيه خبرة 30 سنة لو الشخص عمره 25
-    if experience < 0 or experience > 50:
+    exp = end - start
+    if exp < 0 or exp > 50:
         return "غير منطقي"
 
-    return experience
+    return f"{exp} سنة"
 
-# ---------- التنفيذ ----------
+# ================== العرض ==================
 if uploaded_files:
     for file in uploaded_files:
-        st.subheader(f"📄 {file.name}")
         text = extract_text(file)
-
         years = extract_years(text)
+        experience = calculate_experience(years)
 
-        if years:
-            experience = calculate_experience(years)
-            st.success(f"🧠 سنوات الخبرة التقديرية: {experience} سنة")
-
-            with st.expander("🔍 تفاصيل التحليل"):
-                st.write("السنوات المكتشفة:", years)
-        else:
-            st.error("❌ لم يتم العثور على تواريخ واضحة في السيرة")
+        st.markdown(f"""
+        <div class="card">
+            <h3>📄 {file.name}</h3>
+            <p class="result">🧠 سنوات الخبرة: {experience}</p>
+        </div>
+        """, unsafe_allow_html=True)
