@@ -34,21 +34,18 @@ def extract_text(file):
     else:
         return ""
 
-# دالة لطلب OpenAI واستخراج عدد سنوات الخبرة
+# دالة لطلب OpenAI واستخراج عدد سنوات الخبرة (متوافق مع openai>=1.0.0)
 def get_experience(text):
-    prompt = f"""
-اقرأ النص التالي واخبرني بعدد سنوات الخبرة المذكورة:
-{text}
-
-جاوب فقط بعدد سنوات الخبرة بشكل واضح.
-"""
+    prompt = f"اقرأ النص التالي واخبرني بعدد سنوات الخبرة المذكورة:\n{text}\nجاوب فقط بعدد سنوات الخبرة بشكل واضح."
     try:
-        response = openai.Completion.create(
-            engine="text-davinci-003",
-            prompt=prompt,
-            max_tokens=100
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "أنت مساعد يقوم باستخراج عدد سنوات الخبرة من النصوص."},
+                {"role": "user", "content": prompt}
+            ]
         )
-        return response.choices[0].text.strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         return f"خطأ في قراءة الخبرة: {e}"
 
