@@ -5,85 +5,146 @@ import PyPDF2
 import re
 from datetime import datetime
 
-# ================= إعداد الصفحة =================
+# ===== إجبار إعادة تحميل الواجهة =====
+st.markdown("<!-- FORCE RELOAD -->", unsafe_allow_html=True)
+
+# ===== إعداد الصفحة =====
 st.set_page_config(
     page_title="ATS | HR System",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# ================= CSS احترافي =================
+# ===== CSS واجهة HR (أحمر غامق + دخان) =====
 st.markdown("""
 <style>
 .stApp {
-    background: radial-gradient(circle at top, #4b0f14 0%, #1a0003 65%);
-    color: #f5f5f5;
+    background: linear-gradient(180deg, #3b0d12 0%, #120002 70%);
+    color: #f2f2f2;
     font-family: 'Segoe UI', sans-serif;
 }
 .stApp::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background: url("https://i.imgur.com/8IuucQZ.png");
-    opacity: 0.12;
-    pointer-events: none;
+    content:"";
+    position:fixed;
+    inset:0;
+    background: radial-gradient(circle at 20% 10%, rgba(255,255,255,0.08), transparent 40%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05), transparent 45%);
+    pointer-events:none;
 }
+h1,h2,h3 { color:#ffd6d6; letter-spacing:1px; }
 .card {
-    background: rgba(15, 0, 0, 0.75);
-    border: 1px solid rgba(255, 90, 90, 0.25);
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 20px;
+    background: rgba(20,0,0,0.75);
+    border: 1px solid rgba(255,90,90,0.25);
+    border-radius:16px;
+    padding:18px;
+    margin-bottom:18px;
+    box-shadow:0 0 30px rgba(0,0,0,0.6);
 }
-.result {
-    font-size: 22px;
-    font-weight: bold;
-}
+.badge { font-weight:700; font-size:18px; }
 .junior { color:#ff7675; }
 .mid { color:#fdcb6e; }
 .senior { color:#00b894; }
-footer {visibility: hidden;}
+footer {visibility:hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# ================= العنوان =================
+# ===== العنوان =====
 st.markdown("<h1>🧑‍💼 ATS – Applicant Tracking System</h1>", unsafe_allow_html=True)
-st.markdown("نظام توظيف احترافي لإدارة وفرز المرشحين")
+st.markdown("واجهة HR احترافية لفرز وتحليل السير الذاتية")
 
-# ================= Session =================
+# ===== Session =====
 if "candidates" not in st.session_state:
     st.session_state.candidates = []
 
-# ================= رفع الملفات =================
+# ===== رفع الملفات =====
 uploaded_files = st.file_uploader(
-    "📄 ارفع السير الذاتية",
+    "📄 ارفع السير الذاتية (PDF / Word / Excel)",
     accept_multiple_files=True
 )
 
-# ================= أدوات القراءة =================
+# ===== أدوات القراءة =====
 def extract_text(file):
-    if file.name.lower().endswith(".pdf"):
+    name = file.name.lower()
+    if name.endswith(".pdf"):
         reader = PyPDF2.PdfReader(file)
         return "\n".join([p.extract_text() or "" for p in reader.pages])
-    elif file.name.lower().endswith(".docx"):
+    if name.endswith(".docx"):
         doc = docx.Document(file)
         return "\n".join(p.text for p in doc.paragraphs)
-    elif file.name.lower().endswith((".xlsx", ".xls")):
+    if name.endswith((".xlsx",".xls")):
         df = pd.read_excel(file)
         return df.to_string()
     return ""
 
 def extract_years(text):
-    years = re.findall(r'\b(19\d{2}|20\d{2})\b', text)
-    return sorted(set(int(y) for y in years))
+    return sorted(set(int(y) for y in re.findall(r'\b(19\d{2}|20\d{2})\b', text)))
 
-def calculate_experience(years):
+def calc_experience(years):
     if len(years) < 2:
         return 0
-    return min(datetime.now().year, max(years)) - min(years)
+    end = min(datetime.now().year, max(years))
+    return max(0, end - min(years))
 
 def classify(exp):
-    if exp <= 2:
-        return "Junior", "junior"
-    elif exp <= 6:
-        return
+    if exp <= 2: return "Junior", "junior"
+    if exp <= 6: return "Mid", "mid"
+    return "Senior", "senior"
+
+# ===== معالجة الملفات =====
+if uploaded_files:
+    for f in uploaded_files:
+        txt = extract_text(f)
+        yrs = extract_years(txt)
+        exp = calc_experience(yrs)
+        lvl, css = classify(exp)
+
+        cand = {
+            "Name": f.name,
+            "Experience": exp,
+            "Level": lvl,
+            "Decision": "Pending",
+            "Notes": ""
+        }
+        if cand not in st.session_state.candidates:
+            st.session_state.candidates.append(cand)
+
+# ===== عرض المرشحين =====
+st.markdown("## 📂 المرشحين")
+for i, c in enumerate(st.session_state.candidates):
+    lvl, css = classify(c["Experience"])
+    st.markdown(f"""
+    <div class="card">
+      <h3>📄 {c['Name']}</h3>
+      <div class="badge {css}">🧠 الخبرة: {c['Experience']} سنوات – {lvl}</div>
+    """, unsafe_allow_html=True)
+
+    a,b,d = st.columns(3)
+    with a:
+        if st.button("✅ Accept", key=f"a{i}"): c["Decision"]="Accepted"
+    with b:
+        if st.button("❌ Reject", key=f"r{i}"): c["Decision"]="Rejected"
+    with d:
+        if st.button("⏸ Hold", key=f"h{i}"): c["Decision"]="Hold"
+
+    c["Notes"] = st.text_area("✍️ ملاحظات HR", c["Notes"], key=f"n{i}")
+    st.markdown(f"📌 القرار الحالي: **{c['Decision']}**")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ===== Dashboard =====
+if st.session_state.candidates:
+    st.markdown("## 📊 Dashboard")
+    df = pd.DataFrame(st.session_state.candidates)
+
+    c1,c2,c3 = st.columns(3)
+    c1.metric("👥 المرشحين", len(df))
+    c2.metric("🟢 مقبولين", (df["Decision"]=="Accepted").sum())
+    c3.metric("🔴 مرفوضين", (df["Decision"]=="Rejected").sum())
+
+    st.bar_chart(df["Level"].value_counts())
+
+    st.download_button(
+        "📥 تصدير Excel",
+        df.to_csv(index=False).encode("utf-8-sig"),
+        "ATS_Report.csv",
+        "text/csv"
+    )
