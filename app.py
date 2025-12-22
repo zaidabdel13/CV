@@ -5,9 +5,9 @@ import docx
 import PyPDF2
 
 # -----------------------------
-# مفتاح OpenAI المباشر للتشغيل التجريبي
+# قراءة مفتاح OpenAI من Streamlit Secrets
 # -----------------------------
-openai.api_key = "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"
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # إعداد واجهة التطبيق
 st.set_page_config(page_title="🤖 روبوت قراءة السير الذاتية", layout="wide")
@@ -34,7 +34,7 @@ def extract_text(file):
     else:
         return ""
 
-# دالة لطلب OpenAI واستخراج عدد سنوات الخبرة (متوافقة مع openai==0.28)
+# دالة لطلب OpenAI واستخراج عدد سنوات الخبرة
 def get_experience(text):
     prompt = f"اقرأ النص التالي واخبرني بعدد سنوات الخبرة المذكورة:\n{text}\nجاوب فقط بعدد سنوات الخبرة بشكل واضح."
     try:
