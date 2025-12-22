@@ -5,7 +5,7 @@ import PyPDF2
 import re
 from datetime import datetime
 
-# ===== إجبار إعادة تحميل الواجهة =====
+# ===== إجبار إعادة التحميل =====
 st.markdown("<!-- FORCE RELOAD -->", unsafe_allow_html=True)
 
 # ===== إعداد الصفحة =====
@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ===== CSS واجهة HR (أحمر غامق + دخان) =====
+# ===== CSS واجهة HR =====
 st.markdown("""
 <style>
 .stApp {
@@ -32,6 +32,7 @@ st.markdown("""
     pointer-events:none;
 }
 h1,h2,h3 { color:#ffd6d6; letter-spacing:1px; }
+
 .card {
     background: rgba(20,0,0,0.75);
     border: 1px solid rgba(255,90,90,0.25);
@@ -40,10 +41,26 @@ h1,h2,h3 { color:#ffd6d6; letter-spacing:1px; }
     margin-bottom:18px;
     box-shadow:0 0 30px rgba(0,0,0,0.6);
 }
+
 .badge { font-weight:700; font-size:18px; }
 .junior { color:#ff7675; }
 .mid { color:#fdcb6e; }
 .senior { color:#00b894; }
+
+/* حالة القرار */
+.status {
+    font-size:16px;
+    font-weight:bold;
+    padding:6px 16px;
+    border-radius:20px;
+    display:inline-block;
+    margin-top:8px;
+}
+.accepted { background:#1b5e20; color:#b9f6ca; }
+.rejected { background:#7f0000; color:#ffcdd2; }
+.hold { background:#6d4c41; color:#ffe0b2; }
+.pending { background:#424242; color:#eeeeee; }
+
 footer {visibility:hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -110,24 +127,43 @@ if uploaded_files:
 
 # ===== عرض المرشحين =====
 st.markdown("## 📂 المرشحين")
+
 for i, c in enumerate(st.session_state.candidates):
     lvl, css = classify(c["Experience"])
+
     st.markdown(f"""
     <div class="card">
       <h3>📄 {c['Name']}</h3>
-      <div class="badge {css}">🧠 الخبرة: {c['Experience']} سنوات – {lvl}</div>
+      <div class="badge {css}">
+        🧠 الخبرة: {c['Experience']} سنوات – {lvl}
+      </div>
     """, unsafe_allow_html=True)
 
-    a,b,d = st.columns(3)
-    with a:
-        if st.button("✅ Accept", key=f"a{i}"): c["Decision"]="Accepted"
-    with b:
-        if st.button("❌ Reject", key=f"r{i}"): c["Decision"]="Rejected"
-    with d:
-        if st.button("⏸ Hold", key=f"h{i}"): c["Decision"]="Hold"
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("✅ Accept", key=f"a{i}"):
+            c["Decision"] = "Accepted"
+    with col2:
+        if st.button("❌ Reject", key=f"r{i}"):
+            c["Decision"] = "Rejected"
+    with col3:
+        if st.button("⏸ Hold", key=f"h{i}"):
+            c["Decision"] = "Hold"
 
     c["Notes"] = st.text_area("✍️ ملاحظات HR", c["Notes"], key=f"n{i}")
-    st.markdown(f"📌 القرار الحالي: **{c['Decision']}**")
+
+    status_class = {
+        "Accepted": "accepted",
+        "Rejected": "rejected",
+        "Hold": "hold",
+        "Pending": "pending"
+    }[c["Decision"]]
+
+    st.markdown(
+        f"<div class='status {status_class}'>📌 {c['Decision']}</div>",
+        unsafe_allow_html=True
+    )
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ===== Dashboard =====
