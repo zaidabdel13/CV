@@ -4,10 +4,13 @@ import pandas as pd
 import docx
 import PyPDF2
 
-# قراءة مفتاح OpenAI من Streamlit Secrets
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# -----------------------------
+# مفتاح OpenAI المباشر للتشغيل التجريبي
+# -----------------------------
+openai.api_key = "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"
 
-st.set_page_config(page_title="روبوت قراءة السير الذاتية", layout="wide")
+# إعداد واجهة التطبيق
+st.set_page_config(page_title="🤖 روبوت قراءة السير الذاتية", layout="wide")
 st.title("🤖 روبوت قراءة السير الذاتية")
 st.write("ارفع ملفات PDF, DOCX أو Excel وسيقوم الروبوت بتحليلها واستخراج عدد سنوات الخبرة.")
 
