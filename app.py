@@ -5,15 +5,17 @@ import PyPDF2
 import re
 from datetime import datetime
 
+# ================= إجبار إعادة التحميل =================
 st.markdown("<!-- FORCE RELOAD -->", unsafe_allow_html=True)
 
+# ================= إعداد الصفحة =================
 st.set_page_config(
     page_title="ATS | HR System",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# ================= CSS =================
+# ================= CSS واجهة HR =================
 st.markdown("""
 <style>
 .stApp {
@@ -25,17 +27,22 @@ st.markdown("""
     content:"";
     position:fixed;
     inset:0;
-    background: radial-gradient(circle at 20% 10%, rgba(255,255,255,0.08), transparent 40%),
-                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05), transparent 45%);
+    background:
+      radial-gradient(circle at 20% 10%, rgba(255,255,255,0.08), transparent 40%),
+      radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05), transparent 45%);
     pointer-events:none;
 }
+h1,h2,h3 { color:#ffd6d6; letter-spacing:1px; }
+
 .card {
     background: rgba(20,0,0,0.75);
     border: 1px solid rgba(255,90,90,0.25);
     border-radius:16px;
     padding:18px;
     margin-bottom:18px;
+    box-shadow:0 0 30px rgba(0,0,0,0.6);
 }
+
 .badge { font-weight:700; font-size:18px; }
 .junior { color:#ff7675; }
 .mid { color:#fdcb6e; }
@@ -58,19 +65,25 @@ footer {visibility:hidden;}
 </style>
 """, unsafe_allow_html=True)
 
+# ================= العنوان =================
 st.markdown("<h1>🧑‍💼 ATS – Applicant Tracking System</h1>", unsafe_allow_html=True)
+st.markdown("نظام تتبع المتقدمين – واجهة HR احترافية")
+
+# ================= زر إضافة مرشح =================
+if st.button("➕ إضافة مرشح يدويًا"):
+    st.switch_page("pages/1_Add_Candidate.py")
 
 # ================= Session =================
 if "candidates" not in st.session_state:
-    st.session_state.candidates = {}   # ⬅️ dict بدل list
+    st.session_state.candidates = {}   # dict لمنع التكرار
 
-# ================= Upload =================
+# ================= رفع الملفات =================
 uploaded_files = st.file_uploader(
-    "📄 ارفع السير الذاتية",
+    "📄 ارفع السير الذاتية (PDF / Word / Excel)",
     accept_multiple_files=True
 )
 
-# ================= Helpers =================
+# ================= أدوات القراءة =================
 def extract_text(file):
     name = file.name.lower()
     if name.endswith(".pdf"):
@@ -97,18 +110,18 @@ def classify(exp):
     if exp <= 6: return "Mid", "mid"
     return "Senior", "senior"
 
-# ================= Process Files =================
+# ================= معالجة الملفات =================
 if uploaded_files:
     for f in uploaded_files:
-        candidate_id = f"{f.name}_{f.size}"  # ⬅️ ID ثابت
+        cid = f"{f.name}_{f.size}"
 
-        if candidate_id not in st.session_state.candidates:
+        if cid not in st.session_state.candidates:
             text = extract_text(f)
             years = extract_years(text)
             exp = calc_experience(years)
             lvl, _ = classify(exp)
 
-            st.session_state.candidates[candidate_id] = {
+            st.session_state.candidates[cid] = {
                 "Name": f.name,
                 "Experience": exp,
                 "Level": lvl,
@@ -116,7 +129,7 @@ if uploaded_files:
                 "Notes": ""
             }
 
-# ================= Display =================
+# ================= عرض المرشحين =================
 st.markdown("## 📂 المرشحين")
 
 for cid, c in st.session_state.candidates.items():
